@@ -12,8 +12,13 @@ public class LoggerMiddleware(RequestDelegate next, ILoggerIntegration loggerInt
 {
     public async Task InvokeAsync(HttpContext context, ILoggerActionService loggerActionService)
     {
+        var requestBodyText = string.Empty;
         try
         {
+            context.Request.EnableBuffering();
+            requestBodyText = await new StreamReader(context.Request.Body).ReadToEndAsync();
+            context.Request.Body.Position = 0;
+
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
@@ -60,11 +65,11 @@ public class LoggerMiddleware(RequestDelegate next, ILoggerIntegration loggerInt
                 responseBodyText = JsonSerializer.Serialize(problemDetails);
             }
 
-            await loggerIntegration.SendLog(new LogRegister(context, stopwatch.Elapsed.TotalMilliseconds, responseBodyText, loggerActionService.Logs));
+            await loggerIntegration.SendLog(new LogRegister(context, stopwatch.Elapsed.TotalMilliseconds, responseBodyText, requestBodyText, loggerActionService.Logs));
         }
         catch(Exception ex)
         {
-            await loggerIntegration.SendLog(new LogRegister(context, null, null, loggerActionService.Logs));
+            await loggerIntegration.SendLog(new LogRegister(context, null, null, requestBodyText, loggerActionService.Logs));
         }
     }
 }

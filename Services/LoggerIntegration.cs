@@ -30,7 +30,6 @@ public class LoggerIntegration(IAmazonCloudWatchLogs amazonCloudWatchLogs, IConf
         }
         catch (Exception ex)
         {
-
             Console.WriteLine($"-- LoggerAction ERROR -- Message: {ex.Message} ### Stack Trace: {ex.StackTrace}");
         }
     }
