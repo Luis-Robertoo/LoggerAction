@@ -7,8 +7,27 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 	
+    <!-- Metadados do pacote NuGet -->
     <PropertyGroup>
+	    <PackageId>LoggerAction.Log</PackageId>
+	    <Authors>Luis Roberto</Authors>
+	    <Company>Luis Roberto</Company>
+	    <Description>Middleware para ASP.NET Core que registra requests, responses e logs customizados no AWS CloudWatch, com envio assincrono, retry com backoff exponencial e truncamento seguro em UTF-8. Suporta tambem Workers e BackgroundJobs.</Description>
+	    <PackageTags>aws;cloudwatch;logging;middleware;aspnetcore;observability;logger</PackageTags>
+	    <PackageProjectUrl>https://github.com/Luis-Robertoo/LoggerAction</PackageProjectUrl>
+	    <RepositoryUrl>https://github.com/Luis-Robertoo/LoggerAction</RepositoryUrl>
+	    <RepositoryType>git</RepositoryType>
+	    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 	    <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <!-- Simbolos e Source Link (o SDK do .NET 8 ja embute o Source Link para GitHub). -->
+    <PropertyGroup>
+	    <IncludeSymbols>true</IncludeSymbols>
+	    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+	    <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
 
     <ItemGroup>

@@ -1,5 +1,10 @@
 ﻿# LoggerAction
 
+[![CI](https://github.com/Luis-Robertoo/LoggerAction/actions/workflows/ci.yml/badge.svg)](https://github.com/Luis-Robertoo/LoggerAction/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/LoggerAction.Log.svg)](https://www.nuget.org/packages/LoggerAction.Log)
+[![Downloads](https://img.shields.io/nuget/dt/LoggerAction.Log.svg)](https://www.nuget.org/packages/LoggerAction.Log)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A .NET middleware library for logging HTTP requests and responses to AWS CloudWatch. Supports both API and Worker/BackgroundJob contexts.
 
 ---

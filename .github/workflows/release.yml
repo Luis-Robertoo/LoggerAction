@@ -1,0 +1,106 @@
+name: Release
+
+# Publica no nuget.org usando Trusted Publishing (OIDC), sem API key de longa duracao.
+#
+# Pre-requisitos (configuracao manual, uma unica vez):
+#
+# 1) Secret do repositorio:
+#    Settings > Secrets and variables > Actions > New repository secret
+#      Nome:  NUGET_USER
+#      Valor: seu nome de perfil no nuget.org (NAO o e-mail)
+#
+# 2) Politica de Trusted Publishing no nuget.org:
+#    nuget.org > (seu usuario) > Trusted Publishing > nova politica
+#      Repository Owner: Luis-Robertoo
+#      Repository:       LoggerAction
+#      Workflow File:    release.yml     <- apenas o nome do arquivo
+#      Environment:      (vazio)
+#
+# Para publicar: crie uma Release no GitHub com a tag no formato vX.Y.Z (ex: v1.1.0).
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  SOLUTION: LoggerAction.Log.sln
+  PROJECT: LoggerAction.Log.csproj
+  NUGET_SOURCE: https://api.nuget.org/v3/index.json
+
+jobs:
+  publish:
+    name: Empacotar e publicar no NuGet
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write # obrigatorio para o GitHub emitir o token OIDC
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Resolver versao a partir da tag
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag invalida '$TAG'. Use o formato vX.Y.Z ou vX.Y.Z-sufixo (ex: v1.1.0, v1.2.0-beta.1)."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publicando versao $VERSION"
+
+      - name: Restore
+        run: dotnet restore ${{ env.SOLUTION }}
+
+      - name: Build
+        run: >
+          dotnet build ${{ env.SOLUTION }} -c Release --no-restore
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:ContinuousIntegrationBuild=true
+
+      # Gate: nada quebrado chega ao nuget.org.
+      - name: Testes
+        run: dotnet test ${{ env.SOLUTION }} -c Release --no-build
+
+      - name: Pack
+        run: >
+          dotnet pack ${{ env.PROJECT }} -c Release --no-build
+          -p:Version=${{ steps.version.outputs.version }}
+          -o artifacts
+
+      - name: Guardar artefatos
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages-${{ steps.version.outputs.version }}
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+
+      # A chave temporaria expira em 1 hora: obtenha-a imediatamente antes do push.
+      - name: NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push para o nuget.org
+        run: >
+          dotnet nuget push artifacts/*.nupkg
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --source ${{ env.NUGET_SOURCE }}
+          --skip-duplicate
