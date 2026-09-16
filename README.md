@@ -1,4 +1,4 @@
-﻿# LoggerAction
+﻿# LoggerAction 
 
 [![CI](https://github.com/Luis-Robertoo/LoggerAction/actions/workflows/ci.yml/badge.svg)](https://github.com/Luis-Robertoo/LoggerAction/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/LoggerAction.Log.svg)](https://www.nuget.org/packages/LoggerAction.Log)
