@@ -39,6 +39,25 @@ public class LogRegister
         Logs = logs.ToList();
     }
 
+    /// <summary>
+    /// Substitui os bodies por versões truncadas quando o registro estoura o
+    /// limite de 256 KB por evento do CloudWatch.
+    /// </summary>
+    internal void AplicarTruncamento(string? requestBody, string? responseBody)
+    {
+        RequestBody = requestBody;
+        ResponseBody = responseBody;
+    }
+
+    /// <summary>
+    /// Substitui a lista de logs por uma versão reduzida. Último recurso, usado
+    /// quando o registro estoura 256 KB mesmo sem os bodies.
+    /// </summary>
+    internal void AplicarTruncamentoLogs(List<string> logs)
+    {
+        Logs = logs;
+    }
+
     private string GetClientIp(HttpContext context)
     {
         // tenta pegar do X-Forwarded-For primeiro

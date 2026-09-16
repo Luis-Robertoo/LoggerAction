@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	<Version>1.0.2</Version>
+	<Version>1.1.0</Version>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -14,7 +14,17 @@
     <ItemGroup>
 	    <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
-	
+
+    <!-- O projeto vive na raiz do repositório: sem isto o glob padrão puxaria os testes para dentro da library. -->
+    <ItemGroup>
+	    <Compile Remove="tests\**" />
+	    <None Remove="tests\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+	    <InternalsVisibleTo Include="LoggerAction.Log.Tests" />
+    </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="AWSSDK.CloudWatchLogs" Version="4.0.7.3" />
     <PackageReference Include="AWSSDK.Core" Version="4.0.0.21" />

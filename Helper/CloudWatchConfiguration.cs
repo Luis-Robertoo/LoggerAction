@@ -2,6 +2,6 @@
 
 public class CloudWatchConfiguration
 {
-    public string LogGroupName { get; set; }
-    public string LogStreamName { get; set; }
+    public required string LogGroupName { get; set; }
+    public required string LogStreamName { get; set; }
 }

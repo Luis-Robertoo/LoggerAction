@@ -1,7 +1,7 @@
 ﻿namespace LoggerAction.Log.Helper;
 public class AWSConfiguration
 {
-    public string AccessKey { get; set; }
-    public string SecretKey { get; set; }
-    public string Region { get; set; }
+    public required string AccessKey { get; set; }
+    public required string SecretKey { get; set; }
+    public required string Region { get; set; }
 }

@@ -7,7 +7,7 @@ A .NET middleware library for logging HTTP requests and responses to AWS CloudWa
 ## Installation
 
 ```bash
-dotnet add package LoggerAction
+dotnet add package LoggerAction.Log
 ```
 
 ---
@@ -34,9 +34,20 @@ Add the following to your `appsettings.json`:
   "CloudWatchConfiguration": {
     "LogGroupName": "your-log-group-name",
     "LogStreamName": "your-log-stream-name"
+  },
+  "LoggerActionConfiguration": {
+    "VerbosHttpExcluidos": [ "OPTIONS" ]
   }
 }
 ```
+
+`AWSConfiguration` and `CloudWatchConfiguration` are required — `AddLoggerAction` throws `InvalidOperationException` at startup if either section is missing, instead of failing silently later.
+
+### Excluding HTTP methods
+
+`LoggerActionConfiguration.VerbosHttpExcluidos` is optional. Any request whose method is listed is skipped by the middleware **before** any work is done — no request body buffering, no response interception, no serialization. Useful for CORS preflight (`OPTIONS`) and health checks, which otherwise pollute the log group and add ingestion cost.
+
+Matching is case-insensitive, so `"OPTIONS"`, `"Options"` and `"options"` all work.
 
 ---
 
@@ -133,10 +144,34 @@ Each log entry sent to CloudWatch contains:
 | `StatusCode` | HTTP response status code |
 | `RequestBody` | Raw request body |
 | `ResponseBody` | Raw response body |
-| `DurationMilliseconds` | Total request duration in milliseconds |
+| `DurationMiliSeconds` | Total request duration in milliseconds |
 | `IpCliente` | Client IP address (resolved from `X-Forwarded-For` when behind a proxy) |
 | `TipoProcessamento` | `"API"` for HTTP requests, `"Worker/Jobs"` for background services |
 | `Logs` | List of custom log messages added via `ILoggerActionService` |
+
+---
+
+## Delivery to CloudWatch
+
+Logs are **not** sent inline with the request. `ILoggerIntegration.SendLog` starts the delivery on a background task and returns immediately, so neither JSON serialization nor SigV4 signing happens on the request thread — the response is not held waiting for CloudWatch.
+
+Each record is sent with its own `PutLogEvents` call, retried up to **3 times** with exponential backoff (2s, then 4s). Errors that retrying cannot fix (`ResourceNotFoundException`, `InvalidParameterException`, `DataAlreadyAcceptedException`) are not retried. After the last attempt the record is discarded and the failure is written to the console with the `-- LoggerAction ERROR --` prefix, so a misconfigured log group or bad credentials is visible instead of silent.
+
+### Size limit
+
+CloudWatch rejects any single event above **256 KB**, and it rejects the whole event — not just the excess. To keep the record from being lost, oversized entries are trimmed before sending, in this order:
+
+1. `RequestBody` and `ResponseBody` are truncated, with `...[truncado pelo LoggerAction]` appended. The available space is split between them; a body that already fits in half is kept whole and the leftover goes to the larger one.
+2. If the record still does not fit without the bodies, the `Logs` list is cut down and a final entry states how many messages were dropped.
+
+Every trim prints a `-- LoggerAction WARN --` line identifying the record.
+
+**Known limits:**
+
+- **No concurrency cap.** Each request starts its own delivery task. If CloudWatch gets slow, the retry delays make pending tasks accumulate without a ceiling.
+- **No batching.** One `PutLogEvents` per record. This does not add cost — CloudWatch Logs bills ingested volume, not API calls — but it counts against the per-account throttling quota.
+- **Loss on shutdown.** Deliveries in flight are dropped when the process exits.
+- **Loss after 3 attempts.** The record is discarded and reported on the console.
 
 ---
 

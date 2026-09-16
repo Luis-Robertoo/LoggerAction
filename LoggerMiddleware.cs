@@ -1,4 +1,5 @@
 ﻿using LoggerAction.Log.Domain;
+using LoggerAction.Log.Helper;
 using LoggerAction.Log.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,10 +9,25 @@ using System.Text.Json;
 
 namespace LoggerAction.Log;
 
-public class LoggerMiddleware(RequestDelegate next, ILoggerIntegration loggerIntegration)
+public class LoggerMiddleware(RequestDelegate next, ILoggerIntegration loggerIntegration, LoggerActionConfiguration configuracao)
 {
+    private readonly HashSet<string> _verbosExcluidos =
+        new(configuracao.VerbosHttpExcluidos ?? [], StringComparer.OrdinalIgnoreCase);
+
+    private readonly HashSet<string> _pathExcluidos =
+    new(configuracao.PathExcluidos ?? [], StringComparer.OrdinalIgnoreCase);
+
+
     public async Task InvokeAsync(HttpContext context, ILoggerActionService loggerActionService)
     {
+        // Curto-circuito antes de qualquer buffering: verbos excluídos não pagam
+        // o custo de ler o request body nem de interceptar o response.
+        if (_verbosExcluidos.Contains(context.Request.Method))
+        {
+            await next(context);
+            return;
+        }
+
         var requestBodyText = string.Empty;
         try
         {
@@ -25,7 +41,7 @@ public class LoggerMiddleware(RequestDelegate next, ILoggerIntegration loggerInt
             var originalResponseBody = context.Response.Body;
             using var memStream = new MemoryStream();
             context.Response.Body = memStream;
-            ProblemDetails problemDetails = null;
+            ProblemDetails? problemDetails = null;
 
             try
             {
@@ -67,8 +83,9 @@ public class LoggerMiddleware(RequestDelegate next, ILoggerIntegration loggerInt
 
             await loggerIntegration.SendLog(new LogRegister(context, stopwatch.Elapsed.TotalMilliseconds, responseBodyText, requestBodyText, loggerActionService.Logs));
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
+            Console.WriteLine($"-- LoggerAction ERROR -- Falha no middleware. Message: {ex.Message} ### Stack Trace: {ex.StackTrace}");
             await loggerIntegration.SendLog(new LogRegister(context, null, null, requestBodyText, loggerActionService.Logs));
         }
     }
